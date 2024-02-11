@@ -38,6 +38,7 @@ contract LOGGI is ERC20, Ownable {
     event RemovedFromWhitelist(address indexed account);
 
     mapping(address => bool) public whitelist;
+    uint256 private wlTotal;
     bool public publicSaleStatus;
     uint256 private _price = 5000000000000000 wei;// 0,005 USDT
     uint256 private _totalSaleAmount;
@@ -95,6 +96,10 @@ contract LOGGI is ERC20, Ownable {
         return whitelist[_user];
     }
 
+    function getWLTotal() external view returns (uint256){
+        return wlTotal;
+    }
+
     ////////////////////// OWNER'S FUNCTIONS ///////////////////////
 
     /// @notice This function is for minting tokens
@@ -138,6 +143,7 @@ contract LOGGI is ERC20, Ownable {
 
     function removeFromWhitelist(address _user) external onlyOwner {
         whitelist[_user] = false;
+        wlTotal--;
         emit RemovedFromWhitelist(_user);
     }
 
@@ -180,6 +186,7 @@ contract LOGGI is ERC20, Ownable {
     function _addToWhitelist(address _user) internal {
         if(whitelist[_user]) revert AlreadyWhitelisted();
         whitelist[_user] = true;
+        wlTotal++;
         emit AddedToWhitelist(_user);
     }
 }

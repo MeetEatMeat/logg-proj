@@ -24,17 +24,6 @@ contract LOGGITest is Test {
         _wluser4 = vm.addr(0x0005);
         _psuser = vm.addr(0x0006);
         _loggi = new LOGGI(_totalAlloc, _owner);
-
-        users = [
-            _wluser1,
-            _wluser2,
-            _wluser3
-        ];
-        
-        vm.startPrank(_owner);
-        _loggi.addToWhitelistBatch(users);
-        _loggi.addToWhitelist(_wluser4);
-        vm.stopPrank();
     }
 
     function test_Getters() public {
@@ -42,5 +31,18 @@ contract LOGGITest is Test {
         assertEq(_loggi.decimals(), 18);
         assertEq(_loggi.getPrice(), 5e15);
         assertEq(_loggi.isWhitelisted(_psuser), false);
+    }
+
+    function test_wlAddition() public {
+        users = [
+            _wluser1,
+            _wluser2,
+            _wluser3
+        ];
+        vm.startPrank(_owner);
+        _loggi.addToWhitelistBatch(users);
+        _loggi.addToWhitelist(_wluser4);
+        vm.stopPrank();
+        assertEq(_loggi.getWLTotal(), 4);
     }
 }
