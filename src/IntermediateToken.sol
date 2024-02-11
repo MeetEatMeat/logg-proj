@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -42,7 +42,6 @@ contract LOGGI is ERC20, Ownable {
     uint256 private _price = 5000000000000000 wei;// 0,005 USDT
     uint256 private _totalSaleAmount;
     address public constant _USDT = 0x55d398326f99059fF775485246999027B3197955;
-    address public constant _OWNER = ;
 
     error SaleNotActive();
     error ToLowAmount();
@@ -53,9 +52,11 @@ contract LOGGI is ERC20, Ownable {
     error IncorrectPrice();
     error AlreadyWhitelisted();
 
-    constructor(uint256 totalAmount) ERC20("Logarithm Games Intermediate Token", "LOGGI") Ownable(_OWNER){
+    constructor(uint256 totalAmount, address owner) ERC20("Logarithm Games Intermediate Token", "LOGGI") Ownable(owner){
         _totalSaleAmount = totalAmount;
     }
+
+    //////////////////////  USER'S FUNCTIONS  ///////////////////////
 
     /// @notice This function is for public sale buyers
     /// @param amount Amount is amount of USDT that buyer supposes to spend
@@ -75,27 +76,7 @@ contract LOGGI is ERC20, Ownable {
         return _buy(amount);
     }
 
-    function _buy(uint256 usdtAmount) internal returns(uint256){
-        uint256 prevBalance = IBEP20(_USDT).balanceOf(address(this));
-        IBEP20(_USDT).transferFrom(msg.sender, address(this), usdtAmount);
-        uint256 newBalance = IBEP20(_USDT).balanceOf(address(this));
-
-        if(!(newBalance > prevBalance)) revert ToLowAmount();
-        uint256 exactUsdtSpent = newBalance - prevBalance;
-        if (exactUsdtSpent < 1000000000000000000) revert ToLowAmount();// Should be at least a dollar
-
-        if(_price == 0) revert IncorrectPrice();
-        uint256 loggiAmount = exactUsdtSpent / _price;
-
-        if (loggiAmount > _totalSaleAmount) revert NotEnoughTotalSaleAmount();
-        if (!(loggiAmount > 0)) revert IncorrectAmount();
-
-        _totalSaleAmount -= loggiAmount;
-        _mint(_msgSender(), loggiAmount);
-
-        emit Bought(_msgSender(), loggiAmount);
-        return loggiAmount;
-    }
+    //////////////////////  GETTERS  ///////////////////////
 
     /// @dev In BSC chain the USDT token has 18 digits so we have to use 18 digits with LOGGI token
     function decimals() public view virtual override returns (uint8) {
@@ -118,7 +99,7 @@ contract LOGGI is ERC20, Ownable {
 
     /// @notice This function is for minting tokens
     /// @param amount Amount of tokens to mint
-    function mint(uint amount, address to) public onlyOwner {
+    function mint(uint amount, address to) external onlyOwner {
         if (amount == 0) revert IncorrectAmount();
         if (to == address(this)) revert IncorrectAddress();
 
@@ -155,20 +136,50 @@ contract LOGGI is ERC20, Ownable {
         }
     }
 
-    function _addToWhitelist(address _user) internal {
-        if(whitelist[_user]) revert AlreadyWhitelisted();
-        whitelist[_user] = true;
-        emit AddedToWhitelist(_user);
-    }
-
     function removeFromWhitelist(address _user) external onlyOwner {
         whitelist[_user] = false;
         emit RemovedFromWhitelist(_user);
     }
 
-    function withdraw() external onlyOwner {
+    function withdrawAll() external onlyOwner {
         uint256 amountToWithdraw = IBEP20(_USDT).balanceOf(address(this));
         require(amountToWithdraw > 0, "Nothing to withdraw");
         IBEP20(_USDT).transfer(owner(),  amountToWithdraw);
+    }
+
+    function withdraw(uint256 amount) external onlyOwner {
+        uint256 balance = IBEP20(_USDT).balanceOf(address(this));
+        require(balance >= amount, "Nothing to withdraw");
+        IBEP20(_USDT).transfer(owner(), amount);
+    }
+
+    ////////////////////// INTERNAL FUNCTIONS ///////////////////////
+
+    function _buy(uint256 usdtAmount) internal returns(uint256){
+        uint256 prevBalance = IBEP20(_USDT).balanceOf(address(this));
+        IBEP20(_USDT).transferFrom(msg.sender, address(this), usdtAmount);
+        uint256 newBalance = IBEP20(_USDT).balanceOf(address(this));
+
+        if(!(newBalance > prevBalance)) revert ToLowAmount();
+        uint256 exactUsdtSpent = newBalance - prevBalance;
+        if (exactUsdtSpent < 1000000000000000000) revert ToLowAmount();// Should be at least a dollar
+
+        if(_price == 0) revert IncorrectPrice();
+        uint256 loggiAmount = exactUsdtSpent / _price;
+
+        if (loggiAmount > _totalSaleAmount) revert NotEnoughTotalSaleAmount();
+        if (!(loggiAmount > 0)) revert IncorrectAmount();
+
+        _totalSaleAmount -= loggiAmount;
+        _mint(_msgSender(), loggiAmount);
+
+        emit Bought(_msgSender(), loggiAmount);
+        return loggiAmount;
+    }
+
+    function _addToWhitelist(address _user) internal {
+        if(whitelist[_user]) revert AlreadyWhitelisted();
+        whitelist[_user] = true;
+        emit AddedToWhitelist(_user);
     }
 }
