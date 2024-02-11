@@ -39,7 +39,7 @@ contract LOGGI is ERC20, Ownable {
 
     mapping(address => bool) public whitelist;
     uint256 private wlTotal;
-    bool public publicSaleStatus;
+    bool private saleStatus;
     uint256 private _price = 5000000000000000 wei;// 0,005 USDT
     uint256 private _totalSaleAmount;
     address public constant _USDT = 0x55d398326f99059fF775485246999027B3197955;
@@ -63,7 +63,7 @@ contract LOGGI is ERC20, Ownable {
     /// @param amount Amount is amount of USDT that buyer supposes to spend
     /// @return Return the bought amount of LOGGI tokens
     function buy(uint256 amount) external returns(uint256){
-        if (!publicSaleStatus) revert SaleNotActive();
+        if (!saleStatus) revert SaleNotActive();
 
         return _buy(amount);
     }
@@ -100,6 +100,10 @@ contract LOGGI is ERC20, Ownable {
         return wlTotal;
     }
 
+    function getSaleStatus() external view returns (bool){
+        return saleStatus;
+    }
+
     ////////////////////// OWNER'S FUNCTIONS ///////////////////////
 
     /// @notice This function is for minting tokens
@@ -123,9 +127,9 @@ contract LOGGI is ERC20, Ownable {
     }
 
     /// @notice This function close or open public sale
-    /// @param newSaleState If this param is true sale is opened and otherwise sale is closed
-    function setSaleStatePublic(bool newSaleState) external onlyOwner {
-        publicSaleStatus = newSaleState;
+    /// @param newSaleStatus If this param is true sale is opened and otherwise sale is closed
+    function setSaleStatus(bool newSaleStatus) external onlyOwner {
+        saleStatus = newSaleStatus;
     }
 
     /// @notice A function to add a single user into whitelist
@@ -147,6 +151,7 @@ contract LOGGI is ERC20, Ownable {
         emit RemovedFromWhitelist(_user);
     }
 
+    /// @notice Since this token is a fundrising token all value will be received by team
     function withdrawAll() external onlyOwner {
         uint256 amountToWithdraw = IBEP20(_USDT).balanceOf(address(this));
         require(amountToWithdraw > 0, "Nothing to withdraw");
