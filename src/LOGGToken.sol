@@ -4,28 +4,7 @@ pragma solidity ^0.8.2;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-
-interface IBEP20 {
-  function totalSupply() external view returns (uint256);
-
-  function decimals() external view returns (uint8);
-
-  function symbol() external view returns (string memory);
-
-  function name() external view returns (string memory);
-
-  function getOwner() external view returns (address);
-
-  function balanceOf(address account) external view returns (uint256);
-
-  function transfer(address recipient, uint256 amount) external returns (bool);
-
-  function allowance(address _owner, address spender) external view returns (uint256);
-
-  function approve(address spender, uint256 amount) external returns (bool);
-
-  function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
-}
+import {IBEP20} from "./IBEP.sol";
 
 /// @title A Logarithm Games project BSC network token
 
