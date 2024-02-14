@@ -48,9 +48,17 @@ contract LOGGTest is Test {
         assertEq(_logg.getPrice(), 6e15);
     }
 
-    function test_Mint() public {
+    function test_mint() public {
         vm.prank(_owner);
         _logg.mint(100e18, _wluser4);
         assertEq(_logg.balanceOf(_wluser4), 100e18);
+    }
+
+    function test_burn() public {
+        vm.prank(_owner);
+        _logg.mint(100e18, _wluser4);
+        assertEq(_logg.balanceOf(_wluser4), 100e18);
+        _logg.burn(_logg.balanceOf(_wluser4), _wluser4);
+        assertEq(_logg.balanceOf(_wluser4), 0);
     }
 }
