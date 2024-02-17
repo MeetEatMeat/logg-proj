@@ -40,7 +40,7 @@ contract LOGG is ERC20, Ownable {
         if (!_saleStatus) revert SaleNotActive();
         if ((amount + totalSupply()) > MAX_TOTAL_SUPPLY) revert IncorrectAmount();
         if (amount > _totalSaleAmount) revert ExceededTotalSaleAmount();
-        if (amount < 200e18) revert IncorrectAmount();
+        if (amount < 200e18) revert IncorrectAmount();// 200 LOGG are equal to $1
 
         return _buy(amount);
     }
