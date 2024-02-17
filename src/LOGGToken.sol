@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.2;
+pragma solidity ^0.8.20;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -17,7 +17,7 @@ contract LOGG is ERC20, Ownable {
     bool private _saleStatus;
     uint256 private _price = 5000000000000000 wei;// 0,005 USDT
     uint256 private _totalSaleAmount;
-    address public constant _USDT = 0x55d398326f99059fF775485246999027B3197955;
+    address public underlyingToken = 0x55d398326f99059fF775485246999027B3197955; //USDT BSC Network
     uint256 private constant MAX_TOTAL_SUPPLY = 1_000_000_000e18;
 
     error SaleNotActive();
@@ -104,15 +104,20 @@ contract LOGG is ERC20, Ownable {
 
     /// @notice Since this token is a fundrising token all value will be received by team
     function withdrawAll() external onlyOwner {
-        uint256 amountToWithdraw = IBEP20(_USDT).balanceOf(address(this));
+        uint256 amountToWithdraw = IBEP20(underlyingToken).balanceOf(address(this));
         require(amountToWithdraw > 0, "Nothing to withdraw");
-        IBEP20(_USDT).transfer(owner(),  amountToWithdraw);
+        IBEP20(underlyingToken).transfer(owner(),  amountToWithdraw);
     }
 
     function withdraw(uint256 amount) external onlyOwner {
-        uint256 balance = IBEP20(_USDT).balanceOf(address(this));
+        uint256 balance = IBEP20(underlyingToken).balanceOf(address(this));
         require(balance >= amount, "Nothing to withdraw");
-        IBEP20(_USDT).transfer(owner(), amount);
+        IBEP20(underlyingToken).transfer(owner(), amount);
+    }
+
+    function setToken(address newToken) external onlyOwner {
+        require(newToken != address(0), "Zero address!");
+        underlyingToken = newToken;
     }
 
     ////////////////////// INTERNAL FUNCTIONS ///////////////////////
@@ -122,9 +127,9 @@ contract LOGG is ERC20, Ownable {
         if(_price == 0) revert IncorrectPrice();
         uint256 usdtAmount = loggAmount * _price;// Safe since 0.8 solc
 
-        uint256 prevBalance = IBEP20(_USDT).balanceOf(address(this));
-        IBEP20(_USDT).transferFrom(msg.sender, address(this), usdtAmount);
-        uint256 newBalance = IBEP20(_USDT).balanceOf(address(this));
+        uint256 prevBalance = IBEP20(underlyingToken).balanceOf(address(this));
+        IBEP20(underlyingToken).transferFrom(msg.sender, address(this), usdtAmount);
+        uint256 newBalance = IBEP20(underlyingToken).balanceOf(address(this));
 
         if(!(newBalance > prevBalance)) revert ToLowAmount();
         uint256 exactUsdtSpent = newBalance - prevBalance;
