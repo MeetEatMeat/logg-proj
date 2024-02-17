@@ -7,7 +7,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IBEP20} from "./IBEP.sol";
 
 /// @title A Logarithm Games project BSC network token
-
+/// @author
+/// @notice
 contract LOGG is ERC20, Ownable {
 
     event Minted(address, uint);
