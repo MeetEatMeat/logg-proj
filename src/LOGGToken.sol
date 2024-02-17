@@ -40,14 +40,14 @@ contract LOGG is ERC20, Ownable {
         if (!_saleStatus) revert SaleNotActive();
         if ((amount + totalSupply()) > MAX_TOTAL_SUPPLY) revert IncorrectAmount();
         if (amount > _totalSaleAmount) revert ExceededTotalSaleAmount();
-        if (amount == 0) revert IncorrectAmount();
+        if (amount < 200e18) revert IncorrectAmount();
 
         return _buy(amount);
     }
 
     //////////////////////  GETTERS  ///////////////////////
 
-    /// @dev In BSC chain the USDT token has 18 digits so we have to use 18 digits with LOGGI token
+    /// @dev In BSC chain the USDT token has 18 digits so we have to use 18 digits with LOGG token
     function decimals() public view virtual override returns (uint8) {
         return 18;
     }
@@ -62,6 +62,12 @@ contract LOGG is ERC20, Ownable {
 
     function getSaleStatus() external view returns (bool){
         return _saleStatus;
+    }
+
+    function getExactUSDTAmount(uint256 loggWanted) external view returns (uint256 exactUSDT){
+        uint256 loggAmount = loggWanted;
+        if(_price == 0) revert IncorrectPrice();
+        exactUSDT = loggAmount * _price;
     }
 
     ////////////////////// OWNER'S FUNCTIONS ///////////////////////
@@ -133,7 +139,6 @@ contract LOGG is ERC20, Ownable {
 
         if(!(newBalance > prevBalance)) revert ToLowAmount();
         uint256 exactUsdtSpent = newBalance - prevBalance;
-        if (exactUsdtSpent < 1000000000000000000) revert ToLowAmount();// Should be at least a dollar
         
         if (exactUsdtSpent < usdtAmount){
             uint256 exactLoggAmount = exactUsdtSpent / _price;
