@@ -16,10 +16,13 @@ contract LOGG is ERC20, Ownable {
     event Burned(address, uint);
 
     bool private _saleStatus;
-    uint256 private _price = 5000000000000000 wei;// 0,005 USDT
+    uint256 private _priceUSDT = 5000000000000000 wei;// 0,005 USDT
+    uint256 private _bnbPrice = 20000000000000 wei; //0,00002 BNB
     uint256 private _totalSaleAmount;
     address public underlyingToken = 0x55d398326f99059fF775485246999027B3197955; //USDT BSC Network
     uint256 private constant MAX_TOTAL_SUPPLY = 1_000_000_000e18;
+
+    mapping(address => uint256) public leftovers;
 
     error SaleNotActive();
     error ToLowAmount();
@@ -27,6 +30,7 @@ contract LOGG is ERC20, Ownable {
     error IncorrectAddress();
     error ExceededTotalSaleAmount();
     error IncorrectPrice();
+    error NothingToWithdraw();
 
     constructor(uint256 totalAmount, address owner) ERC20("Logarithm Games Token", "LOGG") Ownable(owner){
         _totalSaleAmount = totalAmount;
@@ -37,13 +41,20 @@ contract LOGG is ERC20, Ownable {
     /// @notice This function is for public sale buyers
     /// @param amount Amount is amount of USDT(BSC) that buyer supposes to spend
     /// @return Return the bought amount of LOGG tokens
-    function buy(uint256 amount) external returns(uint256){
+    function buy(uint256 amount) external payable returns(uint256){
         if (!_saleStatus) revert SaleNotActive();
         if ((amount + totalSupply()) > MAX_TOTAL_SUPPLY) revert IncorrectAmount();
         if (amount > _totalSaleAmount) revert ExceededTotalSaleAmount();
         if (amount < 200e18) revert IncorrectAmount();// 200 LOGG are equal to $1
 
         return _buy(amount);
+    }
+
+    function withdrawLeftovers() external {
+        uint256 leftover = leftovers[msg.sender];
+        if(leftover == 0) revert NothingToWithdraw();
+        leftovers[msg.sender] = 0;
+        payable(msg.sender).transfer(leftover);
     }
 
     //////////////////////  GETTERS  ///////////////////////
@@ -53,8 +64,12 @@ contract LOGG is ERC20, Ownable {
         return 18;
     }
 
-    function getPrice() external view returns (uint256){
-        return _price;
+    function getUSDTPrice() external view returns (uint256){
+        return _priceUSDT;
+    }
+
+    function getBNBPrice() external view returns (uint256) {
+        return _bnbPrice;
     }
 
     function getSaleTotalAmount() external view returns (uint256){
@@ -66,9 +81,13 @@ contract LOGG is ERC20, Ownable {
     }
 
     function getExactUSDTAmount(uint256 loggWanted) external view returns (uint256 exactUSDT){
-        uint256 loggAmount = loggWanted;
-        if(_price == 0) revert IncorrectPrice();
-        exactUSDT = loggAmount * _price;
+        if(_priceUSDT == 0) revert IncorrectPrice();
+        exactUSDT = loggWanted * _priceUSDT;
+    }
+
+    function getExactBNBAmount(uint256 loggWanted) external view returns (uint256 exactBNB) {
+        if(_priceUSDT == 0) revert IncorrectPrice();
+        exactBNB = loggWanted * _bnbPrice;
     }
 
     ////////////////////// OWNER'S FUNCTIONS ///////////////////////
@@ -93,9 +112,14 @@ contract LOGG is ERC20, Ownable {
         emit Burned(from, amount);
     }
 
-    function setPrice(uint256 price) external onlyOwner {
+    function setUSDTPrice(uint256 price) external onlyOwner {
         if(price == 0) revert IncorrectPrice();
-        _price = price;
+        _priceUSDT = price;
+    }
+
+    function setBNBPrice(uint256 price) external onlyOwner {
+        if(price == 0) revert IncorrectPrice();
+        _bnbPrice = price;
     }
 
     function setSaleTotalAmount(uint256 amount) external onlyOwner {
@@ -109,30 +133,56 @@ contract LOGG is ERC20, Ownable {
         _saleStatus = newSaleStatus;
     }
 
-    /// @notice Since this token is a fundrising token all value will be received by team
-    function withdrawAll() external onlyOwner {
-        uint256 amountToWithdraw = IBEP20(underlyingToken).balanceOf(address(this));
-        require(amountToWithdraw > 0, "Nothing to withdraw");
-        IBEP20(underlyingToken).transfer(owner(),  amountToWithdraw);
-    }
-
-    function withdraw(uint256 amount) external onlyOwner {
-        uint256 balance = IBEP20(underlyingToken).balanceOf(address(this));
-        require(balance >= amount, "Nothing to withdraw");
-        IBEP20(underlyingToken).transfer(owner(), amount);
-    }
-
     function setToken(address newToken) external onlyOwner {
         require(newToken != address(0), "Zero address!");
         underlyingToken = newToken;
+    }
+
+    /// @notice Since this token is a fundrising token all value will be received by team
+    function withdrawAll() external onlyOwner {
+        uint256 amountToWithdraw = IBEP20(underlyingToken).balanceOf(address(this));
+        uint256 bnbAmount2withdraw = address(this).balance;
+        if(amountToWithdraw == 0 && bnbAmount2withdraw == 0) revert NothingToWithdraw();
+        if(amountToWithdraw > 0){
+            IBEP20(underlyingToken).transfer(owner(),  amountToWithdraw);
+        }
+        if(bnbAmount2withdraw > 0){
+            payable(owner()).transfer(bnbAmount2withdraw);
+        }
+    }
+
+    function withdrawUSDT(uint256 amount) external onlyOwner {
+        uint256 balance = IBEP20(underlyingToken).balanceOf(address(this));
+        if(balance < amount) revert NothingToWithdraw();
+        IBEP20(underlyingToken).transfer(owner(), amount);
+    }
+
+    function withdrawBNB(uint256 amount) external onlyOwner {
+        uint256 balance = address(this).balance;
+        if(balance < amount) revert NothingToWithdraw();
+        payable(owner()).transfer(amount);
     }
 
     ////////////////////// INTERNAL FUNCTIONS ///////////////////////
 
     function _buy(uint256 amount) internal returns(uint256){
         uint256 loggAmount = amount;
-        if(_price == 0) revert IncorrectPrice();
-        uint256 usdtAmount = loggAmount * _price;// Safe since 0.8 solc
+        if(_priceUSDT == 0 || _bnbPrice == 0) revert IncorrectPrice();
+        if(msg.value > 0){
+            uint256 bnbAmount = loggAmount * _bnbPrice;
+            if(msg.value < bnbAmount) revert ToLowAmount();
+            _totalSaleAmount -= loggAmount;
+            _mint(_msgSender(), loggAmount);
+            emit Bought(_msgSender(), loggAmount);
+
+            if(msg.value > bnbAmount){
+                uint256 leftover = msg.value - bnbAmount;
+                leftovers[msg.sender] += leftover;
+            }
+            return loggAmount;
+        }
+
+        uint256 usdtAmount = loggAmount * _priceUSDT;
 
         uint256 prevBalance = IBEP20(underlyingToken).balanceOf(address(this));
         IBEP20(underlyingToken).transferFrom(msg.sender, address(this), usdtAmount);
@@ -142,7 +192,7 @@ contract LOGG is ERC20, Ownable {
         uint256 exactUsdtSpent = newBalance - prevBalance;
         
         if (exactUsdtSpent < usdtAmount){
-            uint256 exactLoggAmount = exactUsdtSpent / _price;
+            uint256 exactLoggAmount = exactUsdtSpent / _priceUSDT;
             _totalSaleAmount -= exactLoggAmount;
             _mint(_msgSender(), exactLoggAmount);
             
