@@ -7,7 +7,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IBEP20} from "./IBEP.sol";
 
 /// @title A Logarithm Games project BSC network token
-/// @author
+/// @author Logarithm Games
 /// @notice
 contract LOGG is ERC20, Ownable {
 
@@ -50,6 +50,7 @@ contract LOGG is ERC20, Ownable {
         return _buy(amount);
     }
 
+    /// @notice This function sends back all BNB that were overpaid
     function withdrawLeftovers() external {
         uint256 leftover = leftovers[msg.sender];
         if(leftover == 0) revert NothingToWithdraw();
