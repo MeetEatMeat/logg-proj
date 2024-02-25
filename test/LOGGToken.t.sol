@@ -84,7 +84,7 @@ contract LOGGTest is Test {
     function test_Getters() public {
         assertEq(_logg.getSaleTotalAmount(), _totalSaleAmount);
         assertEq(_logg.decimals(), 18);
-        assertEq(_logg.getPrice(), 5e15);
+        assertEq(_logg.getUSDTPrice(), 5e15);
         assertEq(_logg.getSaleStatus(), true);
     }
 
@@ -108,22 +108,22 @@ contract LOGGTest is Test {
         assertEq(_logg.getSaleTotalAmount(), amount);
     }
 
-    function test_setPrice() public {
+    function test_setUSDTPrice() public {
         vm.prank(_owner);
-        _logg.setPrice(6e15);
-        assertEq(_logg.getPrice(), 6e15);
+        _logg.setUSDTPrice(6e15);
+        assertEq(_logg.getUSDTPrice(), 6e15);
     }
 
-    function testFail_setPrice() public {
-        _logg.setPrice(6e15);
-        assertEq(_logg.getPrice(), 6e15);
+    function testFail_setUSDTPrice() public {
+        _logg.setUSDTPrice(6e15);
+        assertEq(_logg.getUSDTPrice(), 6e15);
     }
 
-    function testFuzz_setPrice(uint256 price) public {
+    function testFuzz_setUSDTPrice(uint256 price) public {
         vm.assume(price > 0);
         vm.prank(_owner);
-        _logg.setPrice(price);
-        assertEq(_logg.getPrice(), price);
+        _logg.setUSDTPrice(price);
+        assertEq(_logg.getUSDTPrice(), price);
     }
 
     function test_mint() public {
@@ -166,7 +166,7 @@ contract LOGGTest is Test {
         _logg.withdrawAll();
     }
 
-    function testFail_withdraw() public {
-        _logg.withdraw(_USDT.balanceOf(address(_logg)));
+    function testFail_withdrawUSDT() public {
+        _logg.withdrawUSDT(_USDT.balanceOf(address(_logg)));
     }
 }
