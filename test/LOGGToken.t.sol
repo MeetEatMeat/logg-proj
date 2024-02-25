@@ -35,7 +35,7 @@ contract LOGGTest is Test {
         vm.stopPrank();
     }
 
-    function test_buy() public {
+    function test_buyForUSDT() public {
         uint256 exactUSDT = _logg.getExactUSDTAmount(2000e18);
 
         uint256 balanceBefore = _USDT.balanceOf(_wluser1);
@@ -48,19 +48,21 @@ contract LOGGTest is Test {
         vm.startPrank(_wluser1);
         _USDT.approve(address(_logg), exactUSDT);
         console.log("USDT to LOGG allowance: ", _USDT.allowance(address(_wluser1), address(_logg)));
-        _logg.buy(2000e18);
+        _logg.buyForUSDT(exactUSDT);
         vm.stopPrank();
         assertEq(_logg.balanceOf(_wluser1), 2000e18);
     }
 
-    function testFail_buy() public {
+    function testFail_buyForUSDT() public {
+        uint256 exactUSDT = _logg.getExactUSDTAmount(2000e18);
         vm.startPrank(_wluser1);
-        _logg.buy(2000e18);
+        // Wasn't approved
+        _logg.buyForUSDT(exactUSDT);
         vm.stopPrank();
-        assertEq(_logg.balanceOf(_wluser1), 100e18);
+        assertEq(_logg.balanceOf(_wluser1), 2000e18);
     }
 
-    function testFuzz_buy(uint256 loggAmount) public {
+    function testFuzz_buyForUSDT(uint256 loggAmount) public {
         vm.assume((loggAmount + _logg.totalSupply()) <= 1_000_000_000e18);
         vm.assume(loggAmount < _logg.getSaleTotalAmount());
         vm.assume(loggAmount > 200e18);
@@ -76,9 +78,27 @@ contract LOGGTest is Test {
         vm.startPrank(_wluser1);
         _USDT.approve(address(_logg), exactUSDT);
         console.log("USDT to LOGG allowance: ", _USDT.allowance(address(_wluser1), address(_logg)));
-        _logg.buy(loggAmount);
+        _logg.buyForUSDT(exactUSDT);
         vm.stopPrank();
         assertEq(_logg.balanceOf(_wluser1), loggAmount);
+    }
+
+    function test_buyForBNB() public {
+        // uint256 exactBNB = _logg.getExactBNBAmount(2000e18);
+
+        deal(_wluser1, 1 ether);
+
+        vm.prank(_wluser1);
+        uint256 bought = _logg.buyForBNB{value: 1 ether}();
+        assertEq(_logg.balanceOf(_wluser1), bought);
+    }
+
+    function test_totalSaleAmountDecrease() public{
+        deal(_wluser1, 1 ether);
+        uint256 totalSaleAmount = _logg.getSaleTotalAmount();
+        vm.prank(_wluser1);
+        uint256 bought = _logg.buyForBNB{value: 1 ether}();
+        assertEq(_logg.getSaleTotalAmount(), totalSaleAmount - bought);
     }
 
     function test_Getters() public {
