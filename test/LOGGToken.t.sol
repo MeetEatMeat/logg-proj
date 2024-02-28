@@ -23,12 +23,17 @@ contract LOGGTest is Test {
         _USDT = new USDT();
         _totalSaleAmount = 1000000e18;
         _owner = vm.addr(0x0001);
+        vm.label(address(_owner), "OWNER");
         _wluser1 = vm.addr(0x0002);
+        vm.label(address(_wluser1), "USER1");
         _wluser2 = vm.addr(0x0003);
+        vm.label(address(_wluser2), "USER2");
         _wluser3 = vm.addr(0x0004);
+        vm.label(address(_wluser3), "USER3");
         _wluser4 = vm.addr(0x0005);
+        vm.label(address(_wluser4), "USER4");
         _psuser = vm.addr(0x0006);
-        _logg = new LOGG(_totalSaleAmount, _owner);
+        _logg = new LOGG(_totalSaleAmount, address(_owner));
         vm.startPrank(_owner);
         _logg.setSaleStatus(true);
         _logg.setToken(address(_USDT));
@@ -63,10 +68,12 @@ contract LOGGTest is Test {
     }
 
     function testFuzz_buyForUSDT(uint256 loggAmount) public {
-        vm.assume((loggAmount + _logg.totalSupply()) <= 1_000_000_000e18);
-        vm.assume(loggAmount < _logg.getSaleTotalAmount());
-        vm.assume(loggAmount > 200e18);
-        uint256 exactUSDT = _logg.getExactUSDTAmount(loggAmount);
+        vm.assume(loggAmount > 200);
+        vm.assume(loggAmount <= 1000000);
+
+        vm.assume(((loggAmount * 1e18) + _logg.totalSupply()) <= 1_000_000_000e18);
+        vm.assume((loggAmount * 1e18) < _logg.getSaleTotalAmount());
+        uint256 exactUSDT = _logg.getExactUSDTAmount(loggAmount * 1e18);
 
         uint256 balanceBefore = _USDT.balanceOf(_wluser1);
         console.log("Balance before: ", balanceBefore);
@@ -80,7 +87,7 @@ contract LOGGTest is Test {
         console.log("USDT to LOGG allowance: ", _USDT.allowance(address(_wluser1), address(_logg)));
         _logg.buyForUSDT(exactUSDT);
         vm.stopPrank();
-        assertEq(_logg.balanceOf(_wluser1), loggAmount);
+        assertEq(_logg.balanceOf(_wluser1), loggAmount * 1e18);
     }
 
     function test_buyForBNB() public {
@@ -182,11 +189,146 @@ contract LOGGTest is Test {
         vm.stopPrank();
     }
 
+    function test_withdrawAll() public {
+        uint256 wluser1Amount = 1 ether;
+        uint256 wluser2Amount = 1000e18;
+        uint256 wluser3Amount = 500e18;
+
+        deal(_wluser1, wluser1Amount);
+        deal(address(_USDT), _wluser2, wluser2Amount, true);
+        deal(address(_USDT), _wluser3, wluser3Amount, true);
+
+        vm.prank(_wluser2);
+        _USDT.approve(address(_logg), UINT256_MAX);
+
+        vm.prank(_wluser3);
+        _USDT.approve(address(_logg), UINT256_MAX);
+
+        vm.prank(_wluser1);
+        _logg.buyForBNB{value: wluser1Amount}();
+
+        vm.prank(_wluser2);
+        _logg.buyForUSDT(wluser2Amount);
+
+        vm.prank(_wluser3);
+        _logg.buyForUSDT(wluser3Amount);
+
+        vm.prank(_owner);
+        _logg.withdrawAll();
+
+        assertEq(_USDT.balanceOf(address(_owner)), wluser2Amount + wluser3Amount);
+        assertEq(address(_owner).balance, wluser1Amount);
+    }
+
     function testFail_withdrawAll() public {
+        uint256 wluser1Amount = 1 ether;
+        uint256 wluser2Amount = 1000e18;
+        uint256 wluser3Amount = 500e18;
+
+        deal(_wluser1, wluser1Amount);
+        deal(address(_USDT), _wluser2, wluser2Amount, true);
+        deal(address(_USDT), _wluser3, wluser3Amount, true);
+
+        vm.prank(_wluser2);
+        _USDT.approve(address(_logg), UINT256_MAX);
+
+        vm.prank(_wluser3);
+        _USDT.approve(address(_logg), UINT256_MAX);
+
+        vm.prank(_wluser1);
+        _logg.buyForBNB{value: wluser1Amount}();
+
+        vm.prank(_wluser2);
+        _logg.buyForUSDT(wluser2Amount);
+
+        vm.prank(_wluser3);
+        _logg.buyForUSDT(wluser3Amount);
+
+        vm.prank(_wluser1);
         _logg.withdrawAll();
     }
 
-    function testFail_withdrawUSDT() public {
+    function test_withdrawUSDT() public {
+        uint256 wluser2Amount = 1000e18;
+        uint256 wluser3Amount = 500e18;
+
+        deal(address(_USDT), _wluser2, wluser2Amount, true);
+        deal(address(_USDT), _wluser3, wluser3Amount, true);
+
+        vm.prank(_wluser2);
+        _USDT.approve(address(_logg), UINT256_MAX);
+
+        vm.prank(_wluser3);
+        _USDT.approve(address(_logg), UINT256_MAX);
+
+        vm.prank(_wluser2);
+        _logg.buyForUSDT(wluser2Amount);
+
+        vm.prank(_wluser3);
+        _logg.buyForUSDT(wluser3Amount);
+
+        console.log("Current LOGG owner: ", _logg.owner());
+        console.log("Owner that called withdraw: ", _owner);
+        vm.prank(_owner);
         _logg.withdrawUSDT(_USDT.balanceOf(address(_logg)));
+
+        assertEq(_USDT.balanceOf(address(_owner)), wluser2Amount + wluser3Amount);
+    }
+
+    function testFail_withdrawUSDT() public {
+        uint256 wluser2Amount = 1000e18;
+        uint256 wluser3Amount = 500e18;
+
+        deal(address(_USDT), _wluser2, wluser2Amount, true);
+        deal(address(_USDT), _wluser3, wluser3Amount, true);
+
+        vm.prank(_wluser2);
+        _USDT.approve(address(_logg), UINT256_MAX);
+
+        vm.prank(_wluser3);
+        _USDT.approve(address(_logg), UINT256_MAX);
+
+        vm.prank(_wluser2);
+        _logg.buyForUSDT(wluser2Amount);
+
+        vm.prank(_wluser3);
+        _logg.buyForUSDT(wluser3Amount);
+
+        vm.prank(_wluser1);
+        _logg.withdrawUSDT(_USDT.balanceOf(address(_logg)));
+    }
+
+    function test_withdrawBNB() public {
+        uint256 wluser1Amount = 1 ether;
+        uint256 wluser2Amount = 3 ether;
+        deal(_wluser1, wluser1Amount);
+        deal(_wluser2, wluser2Amount);
+
+        vm.prank(_wluser1);
+        _logg.buyForBNB{value: wluser1Amount}();
+
+        vm.prank(_wluser2);
+        _logg.buyForBNB{value: wluser2Amount}();
+
+        vm.prank(_owner);
+        _logg.withdrawBNB(address(_logg).balance);
+
+        assertEq(address(_owner).balance, wluser1Amount + wluser2Amount);
+    }
+
+    function testFail_withdrawBNB() public {
+        uint256 wluser1Amount = 1 ether;
+        uint256 wluser2Amount = 3 ether;
+        deal(_wluser1, wluser1Amount);
+        deal(_wluser2, wluser2Amount);
+
+        vm.prank(_wluser1);
+        _logg.buyForBNB{value: wluser1Amount}();
+
+        vm.prank(_wluser2);
+        _logg.buyForBNB{value: wluser2Amount}();
+
+        vm.prank(_wluser1);
+        _logg.withdrawBNB(address(_logg).balance);
     }
 }

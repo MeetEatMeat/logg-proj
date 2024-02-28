@@ -100,12 +100,12 @@ contract LOGG is ERC20, Ownable {
 
     function getExactUSDTAmount(uint256 loggWanted) external view returns (uint256 exactUSDT){
         if(_priceUSDT == 0) revert IncorrectPrice();
-        exactUSDT = loggWanted * _priceUSDT;
+        exactUSDT = loggWanted * _priceUSDT / 1 ether;
     }
 
     function getExactBNBAmount(uint256 loggWanted) external view returns (uint256 exactBNB) {
         if(_priceUSDT == 0) revert IncorrectPrice();
-        exactBNB = loggWanted * _bnbPrice;
+        exactBNB = loggWanted * _bnbPrice / 1 ether;
     }
 
     ////////////////////// OWNER'S FUNCTIONS ///////////////////////
