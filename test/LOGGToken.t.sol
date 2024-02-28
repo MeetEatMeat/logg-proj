@@ -21,6 +21,7 @@ contract LOGGTest is Test {
 
     function setUp() public {
         _USDT = new USDT();
+        vm.label(address(_USDT), "USDT");
         _totalSaleAmount = 1000000e18;
         _owner = vm.addr(0x0001);
         vm.label(address(_owner), "OWNER");
@@ -34,6 +35,7 @@ contract LOGGTest is Test {
         vm.label(address(_wluser4), "USER4");
         _psuser = vm.addr(0x0006);
         _logg = new LOGG(_totalSaleAmount, address(_owner));
+        vm.label(address(_logg), "LOGG");
         vm.startPrank(_owner);
         _logg.setSaleStatus(true);
         _logg.setToken(address(_USDT));
@@ -269,8 +271,11 @@ contract LOGGTest is Test {
 
         console.log("Current LOGG owner: ", _logg.owner());
         console.log("Owner that called withdraw: ", _owner);
+
+        uint256 loggBalance = _USDT.balanceOf(address(_logg));
+
         vm.prank(_owner);
-        _logg.withdrawUSDT(_USDT.balanceOf(address(_logg)));
+        _logg.withdrawUSDT(loggBalance);
 
         assertEq(_USDT.balanceOf(address(_owner)), wluser2Amount + wluser3Amount);
     }
@@ -330,5 +335,35 @@ contract LOGGTest is Test {
 
         vm.prank(_wluser1);
         _logg.withdrawBNB(address(_logg).balance);
+    }
+
+    function test_getExactUSDTAmount() public {
+        uint256 loggwanted = 2358;
+        uint256 usdtRequired = _logg.getExactUSDTAmount(loggwanted * 1e18);
+        assertEq(usdtRequired, 1179e16);
+    }
+
+    function testFuzz_getExactUSDTAmount(uint256 loggWanted) public {
+        uint256 price = _logg.getUSDTPrice();
+        vm.assume(loggWanted > 1e18);
+        vm.assume(loggWanted < UINT256_MAX/price);
+        uint256 usdtRequired = _logg.getExactUSDTAmount(loggWanted);
+        uint256 usdtCalculated = loggWanted * price / 1 ether;
+        assertEq(usdtRequired, usdtCalculated);
+    }
+
+    function test_getExactBNBAmount() public {
+        uint256 loggwanted = 2358;
+        uint256 bnbRequired = _logg.getExactBNBAmount(loggwanted * 1e18);
+        assertEq(bnbRequired, 4716e13);
+    }
+
+    function testFuzz_getExactBNBAmount(uint256 loggWanted) public {
+        uint256 price = _logg.getBNBPrice();
+        vm.assume(loggWanted > 1e18);
+        vm.assume(loggWanted < UINT256_MAX/price);
+        uint256 bnbRequired = _logg.getExactBNBAmount(loggWanted);
+        uint256 bnbCalculated = loggWanted * price / 1 ether;
+        assertEq(bnbRequired, bnbCalculated);
     }
 }
